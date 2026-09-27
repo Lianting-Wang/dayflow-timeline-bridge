@@ -1,0 +1,19 @@
+# Dayflow Timeline Bridge macOS publisher configuration.
+# Copy to: ~/.config/dayflow-timeline-bridge/config
+
+# HTTPS publish destination. Leave empty to disable HTTP publishing.
+DAYFLOW_HTTP_URL="https://dayflow.example.com"
+DAYFLOW_HTTP_TOKEN_FILE="$HOME/.config/dayflow-timeline-bridge/publish-token"
+
+# Optional custom User-Agent for reverse proxies/WAFs.
+DAYFLOW_HTTP_USER_AGENT="Dayflow-Timeline-Bridge/0.3.4"
+
+# Optional SSH/rsync backup mirror. Disabled by default.
+DAYFLOW_SSH_ENABLED=0
+# DAYFLOW_SSH_REMOTE="my-server"
+# DAYFLOW_SSH_REMOTE_DIR="/srv/dayflow-mirror"
+# DAYFLOW_SSH_CONNECT_TIMEOUT=10
+
+# Optional overrides.
+# DAYFLOW_DB="$HOME/Library/Application Support/Dayflow/chunks.sqlite"
+# DAYFLOW_STATE_DIR="$HOME/.local/state/dayflow-timeline-bridge"

@@ -1,0 +1,38 @@
+services:
+  dayflow-api:
+    build: .
+    container_name: dayflow-timeline-bridge
+    restart: unless-stopped
+    read_only: true
+
+    # Run as the host UID/GID so the process can write only to the bind-mounted
+    # Dayflow data directory while the container root filesystem stays read-only.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+
+    environment:
+      DAYFLOW_DB: /dayflow/timeline.sqlite
+      DAYFLOW_HASH: /dayflow/timeline.sha256
+      DAYFLOW_LAST_SYNC: /dayflow/.last-sync
+      DAYFLOW_TZ: "${DAYFLOW_TZ:-America/New_York}"
+      DAYFLOW_DAY_BOUNDARY_HOUR: "${DAYFLOW_DAY_BOUNDARY_HOUR:-4}"
+      DAYFLOW_MAX_UPLOAD_MB: "${DAYFLOW_MAX_UPLOAD_MB:-64}"
+      DAYFLOW_READ_TOKEN_FILE: /run/secrets/dayflow_read_token
+      DAYFLOW_PUBLISH_TOKEN_FILE: /run/secrets/dayflow_publish_token
+
+    volumes:
+      - ${DAYFLOW_MIRROR_DIR:-./data}:/dayflow:rw
+      - ./secrets/dayflow_read_token:/run/secrets/dayflow_read_token:ro
+      - ./secrets/dayflow_publish_token:/run/secrets/dayflow_publish_token:ro
+
+    ports:
+      # Publish on the host; restrict this port with your host/cloud firewall
+      # and place a TLS reverse proxy in front of it.
+      - "${DAYFLOW_BIND_ADDR:-0.0.0.0}:${DAYFLOW_API_PORT:-8082}:8080"

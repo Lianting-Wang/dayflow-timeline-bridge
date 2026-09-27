@@ -1,0 +1,42 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Python syntax
+        run: python -m py_compile app/main.py scripts/generate_tokens.py
+      - name: Tests
+        run: pytest -q
+      - name: Compose validation
+        run: docker compose config -q
+      - name: Docker build
+        run: docker build --tag dayflow-timeline-bridge:test .
+
+  macos-publisher:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: zsh syntax
+        run: /bin/zsh -n mac/sync_dayflow_timeline.sh
+      - name: Publisher behavioral test
+        run: /bin/bash tests/test_publisher_macos.sh

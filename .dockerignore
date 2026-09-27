@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+secrets/*
+data/*
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+.pytest_cache/
+.venv/
+tests/
+.github/
+requirements-dev.txt
+TESTING.md
