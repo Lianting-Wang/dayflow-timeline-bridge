@@ -19,13 +19,14 @@ The tests cover:
 - logical SHA-256 sidecar updates;
 - timeline overlap semantics around the 04:00 boundary;
 - `metadata.appSites` and distraction parsing;
-- activity detail and search;
+- activity detail and search, including literal SQL `LIKE` wildcard characters (`%`, `_`, and `\\`);
 - time-breakdown clipping;
 - invalid date/range/query validation;
 - rejection of wrong hashes, corrupt SQLite, empty uploads, bad schema, extra tables, and deleted rows;
 - preservation of the live mirror after rejected publishes;
 - millisecond timestamp detection;
 - upload-size enforcement;
+- startup configuration validation for day-boundary and upload-size settings;
 - token generation permissions and overwrite protection.
 
 ## Static checks
@@ -36,7 +37,7 @@ python -m py_compile app/main.py scripts/generate_tokens.py
 docker compose config -q
 ```
 
-GitHub Actions runs the Python/API suite and a real Docker image build on Ubuntu, plus publisher syntax and behavioral checks on a native macOS runner.
+GitHub Actions runs the Python/API suite, Compose validation, a real Docker image build, and a container `/healthz` startup smoke test on Ubuntu, plus publisher syntax and behavioral checks on a native macOS runner.
 
 - token generation is all-or-nothing when one credential file already exists.
 

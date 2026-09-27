@@ -137,7 +137,7 @@ curl -s http://127.0.0.1:8082/healthz | jq
   "ok": true,
   "mirror_present": false,
   "service": "dayflow-timeline-bridge",
-  "version": "0.3.4"
+  "version": "0.3.5"
 }
 ```
 
@@ -303,6 +303,8 @@ timeline.sha256
 | `GET` | `/v1/search?q=...&limit=...` | read token | 搜索 title/summary/detail |
 | `GET` | `/v1/time-breakdown?from=YYYY-MM-DD&to=YYYY-MM-DD` | read token | 按 category 汇总 activity-card duration |
 
+搜索中的 `%`、`_` 和 `\\` 会按字面字符处理，不会被当成 SQL `LIKE` wildcard。
+
 ### Publish 请求
 
 ```http
@@ -337,11 +339,13 @@ Content-Type: application/octet-stream
 | `DAYFLOW_MIRROR_DIR` | `./data` | 持久化 mirror 目录 |
 | `DAYFLOW_API_PORT` | `8082` | 宿主机端口 |
 | `DAYFLOW_BIND_ADDR` | `0.0.0.0` | Docker publish 使用的宿主机地址 |
-| `DAYFLOW_MAX_UPLOAD_MB` | `64` | SQLite 上传大小上限 |
+| `DAYFLOW_MAX_UPLOAD_MB` | `64` | SQLite 上传大小上限；必须 >= 1 |
 | `DAYFLOW_TZ` | `America/New_York` | Dayflow timezone |
-| `DAYFLOW_DAY_BOUNDARY_HOUR` | `4` | Dayflow day 起始小时 |
+| `DAYFLOW_DAY_BOUNDARY_HOUR` | `4` | Dayflow day 起始小时；必须为 0–23 |
 
 容器内部使用 `DAYFLOW_READ_TOKEN_FILE` 和 `DAYFLOW_PUBLISH_TOKEN_FILE`。
+
+Compose 还为 `/healthz` 配置了容器 healthcheck，因此服务启动后 `docker compose ps` 可以直接显示 `healthy` 状态。
 
 ### macOS publisher
 
@@ -352,7 +356,7 @@ Content-Type: application/octet-stream
 | `DAYFLOW_STATE_DIR` | `~/.local/state/dayflow-timeline-bridge` | hash / lock state 目录 |
 | `DAYFLOW_HTTP_URL` | 空 | 远端 API base URL；设置后启用 HTTP publish |
 | `DAYFLOW_HTTP_TOKEN_FILE` | `~/.config/dayflow-timeline-bridge/publish-token` | publish credential |
-| `DAYFLOW_HTTP_USER_AGENT` | `Dayflow-Timeline-Bridge/0.3.4` | HTTP publish User-Agent |
+| `DAYFLOW_HTTP_USER_AGENT` | `Dayflow-Timeline-Bridge/0.3.5` | HTTP publish User-Agent |
 | `DAYFLOW_SSH_ENABLED` | `0` | 是否启用 SSH/rsync 备用镜像 |
 | `DAYFLOW_SSH_REMOTE` | 空 | SSH host / alias |
 | `DAYFLOW_SSH_REMOTE_DIR` | 空 | SSH 备用镜像目录 |

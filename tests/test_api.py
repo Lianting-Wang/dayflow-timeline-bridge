@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sqlite3
 import sys
 import uuid
@@ -17,7 +18,13 @@ from fastapi.testclient import TestClient
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _load_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, max_upload_mb: int = 64):
+def _load_app(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    max_upload_mb: int | str = 64,
+    day_boundary_hour: int | str = 4,
+):
     data = tmp_path / "data"
     secrets = tmp_path / "secrets"
     data.mkdir()
@@ -32,7 +39,7 @@ def _load_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, max_upload_mb:
         "DAYFLOW_READ_TOKEN_FILE": str(secrets / "read"),
         "DAYFLOW_PUBLISH_TOKEN_FILE": str(secrets / "publish"),
         "DAYFLOW_TZ": "America/New_York",
-        "DAYFLOW_DAY_BOUNDARY_HOUR": "4",
+        "DAYFLOW_DAY_BOUNDARY_HOUR": str(day_boundary_hour),
         "DAYFLOW_MAX_UPLOAD_MB": str(max_upload_mb),
     }
     for key, value in env.items():
@@ -213,7 +220,7 @@ def test_auth_publish_read_and_idempotency(bridge):
     status = client.get("/v1/status", headers=read_headers).json()
     assert status["card_count"] == 3
     assert status["timeline_hash"] == timeline_hash
-    assert status["api_version"] == "0.3.4"
+    assert status["api_version"] == "0.3.5"
 
 
 def test_timeline_activity_search_and_breakdown(bridge):
@@ -245,6 +252,46 @@ def test_timeline_activity_search_and_breakdown(bridge):
     )
     assert breakdown.status_code == 200
     assert breakdown.json()["total_minutes"] == 60
+
+
+def test_search_treats_sql_like_wildcards_as_literals(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    _, client, _ = _load_app(tmp_path, monkeypatch)
+    source = tmp_path / "search-literals.sqlite"
+    rows = _rows()
+
+    first = list(rows[0])
+    first[3] = "100% complete"
+    first[4] = r"path\name"
+    rows[0] = tuple(first)
+
+    second = list(rows[1])
+    second[3] = "under_score"
+    rows[1] = tuple(second)
+
+    _make_db(source, rows)
+    timeline_hash = _logical_hash(source)
+    assert (
+        client.put(
+            "/v1/publish",
+            headers=_publish_headers(timeline_hash),
+            content=source.read_bytes(),
+        ).status_code
+        == 200
+    )
+
+    headers = {"Authorization": "Bearer read-secret"}
+
+    percent = client.get("/v1/search", params={"q": "%"}, headers=headers).json()
+    assert [item["record_id"] for item in percent["activities"]] == [1]
+
+    underscore = client.get("/v1/search", params={"q": "_"}, headers=headers).json()
+    assert [item["record_id"] for item in underscore["activities"]] == [2]
+
+    backslash = client.get("/v1/search", params={"q": "\\"}, headers=headers).json()
+    assert [item["record_id"] for item in backslash["activities"]] == [1]
 
 
 def test_validation_rejections_preserve_live_database(bridge, tmp_path: Path):
@@ -391,10 +438,30 @@ def test_millisecond_timestamps(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
 
 def test_upload_size_limit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    _, client, _ = _load_app(tmp_path, monkeypatch, max_upload_mb=0)
+    _, client, _ = _load_app(tmp_path, monkeypatch, max_upload_mb=1)
     response = client.put(
         "/v1/publish",
         headers=_publish_headers("4" * 64),
-        content=b"x",
+        content=b"x" * (1024 * 1024 + 1),
     )
     assert response.status_code == 413
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"day_boundary_hour": 24}, "DAYFLOW_DAY_BOUNDARY_HOUR must be <= 23"),
+        ({"day_boundary_hour": -1}, "DAYFLOW_DAY_BOUNDARY_HOUR must be >= 0"),
+        ({"day_boundary_hour": "bad"}, "DAYFLOW_DAY_BOUNDARY_HOUR must be an integer"),
+        ({"max_upload_mb": 0}, "DAYFLOW_MAX_UPLOAD_MB must be >= 1"),
+        ({"max_upload_mb": "bad"}, "DAYFLOW_MAX_UPLOAD_MB must be an integer"),
+    ],
+)
+def test_invalid_startup_configuration_fails_fast(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    kwargs: dict,
+    message: str,
+):
+    with pytest.raises(RuntimeError, match=re.escape(message)):
+        _load_app(tmp_path, monkeypatch, **kwargs)

@@ -24,7 +24,7 @@ LOCK_DIR="$STATE_DIR/sync.lock"
 # HTTP(S) publishing is the primary path.
 HTTP_URL="${DAYFLOW_HTTP_URL:-}"
 HTTP_TOKEN_FILE="${DAYFLOW_HTTP_TOKEN_FILE:-$HOME/.config/dayflow-timeline-bridge/publish-token}"
-HTTP_USER_AGENT="${DAYFLOW_HTTP_USER_AGENT:-Dayflow-Timeline-Bridge/0.3.4}"
+HTTP_USER_AGENT="${DAYFLOW_HTTP_USER_AGENT:-Dayflow-Timeline-Bridge/0.3.5}"
 
 # Optional SSH/rsync backup mirror. Disabled unless explicitly enabled.
 SSH_ENABLED="${DAYFLOW_SSH_ENABLED:-0}"

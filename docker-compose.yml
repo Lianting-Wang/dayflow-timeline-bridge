@@ -32,6 +32,17 @@ services:
       - ./secrets/dayflow_read_token:/run/secrets/dayflow_read_token:ro
       - ./secrets/dayflow_publish_token:/run/secrets/dayflow_publish_token:ro
 
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
     ports:
       # Publish on the host; restrict this port with your host/cloud firewall
       # and place a TLS reverse proxy in front of it.

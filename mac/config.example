@@ -6,7 +6,7 @@ DAYFLOW_HTTP_URL="https://dayflow.example.com"
 DAYFLOW_HTTP_TOKEN_FILE="$HOME/.config/dayflow-timeline-bridge/publish-token"
 
 # Optional custom User-Agent for reverse proxies/WAFs.
-DAYFLOW_HTTP_USER_AGENT="Dayflow-Timeline-Bridge/0.3.4"
+DAYFLOW_HTTP_USER_AGENT="Dayflow-Timeline-Bridge/0.3.5"
 
 # Optional SSH/rsync backup mirror. Disabled by default.
 DAYFLOW_SSH_ENABLED=0

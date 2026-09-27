@@ -15,7 +15,28 @@ from zoneinfo import ZoneInfo
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-APP_VERSION = "0.3.4"
+APP_VERSION = "0.3.5"
+
+
+def _env_int(
+    name: str,
+    default: int,
+    *,
+    minimum: int | None = None,
+    maximum: int | None = None,
+) -> int:
+    raw = os.environ.get(name, str(default))
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be an integer") from exc
+
+    if minimum is not None and value < minimum:
+        raise RuntimeError(f"{name} must be >= {minimum}")
+    if maximum is not None and value > maximum:
+        raise RuntimeError(f"{name} must be <= {maximum}")
+    return value
+
 
 DB_PATH = Path(os.environ.get("DAYFLOW_DB", "/dayflow/timeline.sqlite"))
 HASH_PATH = Path(os.environ.get("DAYFLOW_HASH", "/dayflow/timeline.sha256"))
@@ -29,8 +50,14 @@ PUBLISH_TOKEN_FILE = Path(
 )
 
 TZ_NAME = os.environ.get("DAYFLOW_TZ", "America/New_York")
-DAY_BOUNDARY_HOUR = int(os.environ.get("DAYFLOW_DAY_BOUNDARY_HOUR", "4"))
-MAX_UPLOAD_BYTES = int(os.environ.get("DAYFLOW_MAX_UPLOAD_MB", "64")) * 1024 * 1024
+DAY_BOUNDARY_HOUR = _env_int(
+    "DAYFLOW_DAY_BOUNDARY_HOUR",
+    4,
+    minimum=0,
+    maximum=23,
+)
+MAX_UPLOAD_MB = _env_int("DAYFLOW_MAX_UPLOAD_MB", 64, minimum=1)
+MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 TZ = ZoneInfo(TZ_NAME)
 HEX64_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -636,12 +663,17 @@ def activity_detail(record_id: int):
     return result
 
 
+def _escape_like(value: str) -> str:
+    # Treat %, _, and backslash literally in the public search API.
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 @app.get("/v1/search", dependencies=[Depends(require_read_auth)])
 def search(
     q: str = Query(min_length=1, max_length=500),
     limit: int = Query(default=50, ge=1, le=200),
 ):
-    pattern = f"%{q}%"
+    pattern = f"%{_escape_like(q)}%"
     with _connect() as conn:
         divisor = _timestamp_divisor(conn)
         rows = conn.execute(
@@ -651,9 +683,9 @@ def search(
             FROM timeline_cards
             WHERE is_deleted = 0
               AND (
-                    COALESCE(title, '') LIKE ? COLLATE NOCASE
-                 OR COALESCE(summary, '') LIKE ? COLLATE NOCASE
-                 OR COALESCE(detailed_summary, '') LIKE ? COLLATE NOCASE
+                    COALESCE(title, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
+                 OR COALESCE(summary, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
+                 OR COALESCE(detailed_summary, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
               )
             ORDER BY end_ts DESC, id DESC
             LIMIT ?

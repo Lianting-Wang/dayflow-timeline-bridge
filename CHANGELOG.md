@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.5
+
+- Made `/v1/search` treat `%`, `_`, and backslash as literal characters instead of SQL `LIKE` wildcards.
+- Added fail-fast startup validation: `DAYFLOW_DAY_BOUNDARY_HOUR` must be 0–23 and `DAYFLOW_MAX_UPLOAD_MB` must be an integer >= 1.
+- Added a Docker Compose healthcheck using the unauthenticated `/healthz` endpoint.
+- Added a CI container startup smoke test that launches the built image and verifies `/healthz` reports version 0.3.5.
+- Added regression tests for literal search characters and invalid startup configuration.
+- Updated English and Chinese documentation for the new validation and health behavior.
+
 ## 0.3.4
 
 - Made the hash of the exact generated SQLite snapshot authoritative for publishing, eliminating a source-hash/snapshot race if Dayflow writes between change detection and snapshot creation.

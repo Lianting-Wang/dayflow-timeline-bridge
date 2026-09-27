@@ -137,7 +137,7 @@ Expected shape:
   "ok": true,
   "mirror_present": false,
   "service": "dayflow-timeline-bridge",
-  "version": "0.3.4"
+  "version": "0.3.5"
 }
 ```
 
@@ -303,6 +303,8 @@ The two destinations keep independent state. If the backup mirror fails after HT
 | `GET` | `/v1/search?q=...&limit=...` | Read token | Case-insensitive search across title/summary/detail |
 | `GET` | `/v1/time-breakdown?from=YYYY-MM-DD&to=YYYY-MM-DD` | Read token | Category-level activity-card duration totals |
 
+Search treats `%`, `_`, and `\\` as literal characters rather than SQL `LIKE` wildcards.
+
 ### Publish request
 
 ```http
@@ -337,11 +339,13 @@ The default timezone is `America/New_York`; both timezone and boundary hour are 
 | `DAYFLOW_MIRROR_DIR` | `./data` | Persistent published-mirror directory |
 | `DAYFLOW_API_PORT` | `8082` | Published host port |
 | `DAYFLOW_BIND_ADDR` | `0.0.0.0` | Host address used for Docker port publishing |
-| `DAYFLOW_MAX_UPLOAD_MB` | `64` | Maximum accepted SQLite upload size |
+| `DAYFLOW_MAX_UPLOAD_MB` | `64` | Maximum accepted SQLite upload size; must be >= 1 |
 | `DAYFLOW_TZ` | `America/New_York` | Dayflow timezone |
-| `DAYFLOW_DAY_BOUNDARY_HOUR` | `4` | Local hour at which a Dayflow day starts |
+| `DAYFLOW_DAY_BOUNDARY_HOUR` | `4` | Local hour at which a Dayflow day starts; must be 0–23 |
 
 The container uses `DAYFLOW_READ_TOKEN_FILE` and `DAYFLOW_PUBLISH_TOKEN_FILE` internally.
+
+The supplied Compose file also defines a container healthcheck against `/healthz`, so `docker compose ps` can report the service as `healthy` after startup.
 
 ### macOS publisher
 
@@ -352,7 +356,7 @@ The container uses `DAYFLOW_READ_TOKEN_FILE` and `DAYFLOW_PUBLISH_TOKEN_FILE` in
 | `DAYFLOW_STATE_DIR` | `~/.local/state/dayflow-timeline-bridge` | Hash/lock state directory |
 | `DAYFLOW_HTTP_URL` | empty | Remote API base URL; setting it enables HTTP publishing |
 | `DAYFLOW_HTTP_TOKEN_FILE` | `~/.config/dayflow-timeline-bridge/publish-token` | Publish credential |
-| `DAYFLOW_HTTP_USER_AGENT` | `Dayflow-Timeline-Bridge/0.3.4` | User-Agent used for HTTP publishing |
+| `DAYFLOW_HTTP_USER_AGENT` | `Dayflow-Timeline-Bridge/0.3.5` | User-Agent used for HTTP publishing |
 | `DAYFLOW_SSH_ENABLED` | `0` | Enable optional SSH/rsync backup mirror |
 | `DAYFLOW_SSH_REMOTE` | empty | SSH host or alias |
 | `DAYFLOW_SSH_REMOTE_DIR` | empty | Remote mirror directory |
